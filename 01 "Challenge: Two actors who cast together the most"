@@ -1,0 +1,85 @@
+Description:
+Given the the schema presented below find two actors who cast together the most and list titles of only those movies they were casting together. Order the result set alphabetically by the movie title.
+
+Table film_actor
+ Column     | Type                        | Modifiers
+------------+-----------------------------+----------
+actor_id    | smallint                    | not null
+film_id     | smallint                    | not null
+...
+Table actor
+ Column     | Type                        | Modifiers
+------------+-----------------------------+----------
+actor_id    | integer                     | not null 
+first_name  | character varying(45)       | not null
+last_name   | character varying(45)       | not null
+...
+Table film
+ Column     | Type                        | Modifiers
+------------+-----------------------------+----------
+film_id     | integer                     | not null
+title       | character varying(255)      | not null
+...
+The desired output:
+first_actor | second_actor | title
+------------+--------------+--------------------
+John Doe    | Jane Doe     | The Best Movie Ever
+...
+first_actor - Full name (First name + Last name separated by a space)
+second_actor - Full name (First name + Last name separated by a space)
+title - Movie title
+Note: actor_id of the first_actor should be lower then actor_id of the second_actor
+
+---------------------------------------------------------------------------------------------------------------------------
+
+WITH actor_pairs AS ( /*create pairs of actors and films*/
+    SELECT
+        a1.actor_id AS actor_id1,
+        a2.actor_id AS actor_id2,
+        CONCAT(a1.first_name, ' ', a1.last_name) AS first_actor,
+        CONCAT(a2.first_name, ' ', a2.last_name) AS second_actor,
+        f.title
+    FROM
+        film_actor fa1
+    JOIN
+        film_actor fa2 ON fa1.film_id = fa2.film_id
+    JOIN
+        actor a1 ON fa1.actor_id = a1.actor_id
+    JOIN
+        actor a2 ON fa2.actor_id = a2.actor_id
+    JOIN
+        film f ON fa1.film_id = f.film_id
+    WHERE
+        a1.actor_id < a2.actor_id
+),
+pair_count AS ( /*define pairs with actors who cast together the most*/
+    SELECT
+        actor_id1,
+        actor_id2,
+        first_actor,
+        second_actor,
+        COUNT(*) AS pairings_count
+    FROM
+        actor_pairs
+    GROUP BY
+        actor_id1, actor_id2, first_actor, second_actor
+    ORDER BY
+        pairings_count DESC
+    LIMIT 1
+)
+SELECT
+    pc.first_actor,
+    pc.second_actor,
+    ap.title
+FROM
+    pair_count pc
+JOIN
+    actor_pairs ap ON pc.actor_id1 = ap.actor_id1 
+                        AND pc.actor_id2 = ap.actor_id2
+ORDER BY
+    ap.title;
+
+
+
+
+
